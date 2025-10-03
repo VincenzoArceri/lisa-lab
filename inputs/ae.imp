@@ -3,7 +3,7 @@ class ae {
 		def b = a + 1;
 		def y = a - b;
 		def x = y + b;
-   		while (a + b  )
+   		while (y < a + b)
         	y = y - x * x;
     }
 
