@@ -1,0 +1,22 @@
+class ae {
+	f1(a) {
+		def b = a + 1;
+		def y = a - b;
+		def x = y + b;
+   		while (a + b  )
+        	y = y - x * x;
+    }
+
+    f2() {
+    	def a = 0;
+    	def b = 0;
+    	def x = a + b;
+    	def y = x + 1;
+    	x = y + 1;
+    }
+
+    f3(a, b) {
+    	def x = 0;
+    	x = x + 1;
+    }
+}
