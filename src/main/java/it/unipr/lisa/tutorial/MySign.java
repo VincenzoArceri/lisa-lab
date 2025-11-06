@@ -9,6 +9,7 @@ import it.unive.lisa.analysis.nonrelational.value.BaseNonRelationalValueDomain;
 import it.unive.lisa.analysis.nonrelational.value.ValueEnvironment;
 import it.unive.lisa.program.cfg.ProgramPoint;
 import it.unive.lisa.symbolic.value.Constant;
+import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.operator.AdditionOperator;
 import it.unive.lisa.symbolic.value.operator.DivisionOperator;
@@ -16,6 +17,11 @@ import it.unive.lisa.symbolic.value.operator.ModuloOperator;
 import it.unive.lisa.symbolic.value.operator.MultiplicationOperator;
 import it.unive.lisa.symbolic.value.operator.SubtractionOperator;
 import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonEq;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonGe;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonGt;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonLe;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonLt;
 import it.unive.lisa.symbolic.value.operator.unary.NumericNegation;
 import it.unive.lisa.symbolic.value.operator.unary.UnaryOperator;
 import it.unive.lisa.util.representation.StringRepresentation;
@@ -186,17 +192,57 @@ public class MySign implements BaseNonRelationalValueDomain<MySign> {
 	public String toString() {
 		return representation().toString();
 	}
-	
-	
+			
 	@Override
 	public ValueEnvironment<MySign> assumeBinaryExpression(ValueEnvironment<MySign> environment,
 			BinaryOperator operator, ValueExpression left, ValueExpression right, ProgramPoint src, ProgramPoint dest,
 			SemanticOracle oracle) throws SemanticException {
+		Identifier id;
+		MySign eval;
+		boolean rightIsExpr;
+		if (left instanceof Identifier) {
+			eval = eval(right, environment, src, oracle);
+			id = (Identifier) left;
+			rightIsExpr = true;
+		} else if (right instanceof Identifier) {
+			eval = eval(left, environment, src, oracle);
+			id = (Identifier) right;
+			rightIsExpr = false;
+		} else
+			return environment;
 		
-		// TODO
-		MySign leftSign = eval(left, environment, src, oracle);
-		MySign rightSign = eval(left, environment, src, oracle);
-		return null;
+		if (eval.isBottom() || environment.getState(id).isBottom())
+			return environment.bottom();
+		
+		MySign update = null;
+		if (operator == ComparisonEq.INSTANCE) { // x == v, v == x
+			update = eval;
+		} else if (operator == ComparisonGe.INSTANCE) { // x >= v, v >= x
+			if (rightIsExpr && eval.isPositive())
+				update = eval;
+			else if (!rightIsExpr && eval.isNegative())
+				update = eval;
+		} else if (operator == ComparisonLe.INSTANCE) { // x <= v, v <= x
+			if (rightIsExpr && eval.isNegative())
+				update = eval;
+			else if (!rightIsExpr && eval.isPositive())
+				update = eval;
+		} else if (operator == ComparisonLt.INSTANCE) { // x < v, v < x
+			if (rightIsExpr && (eval.isNegative() || eval.isZero()))
+				update = NEG;
+			else if (!rightIsExpr && (eval.isPositive() || eval.isZero()))
+				update = POS;
+		} else if (operator == ComparisonGt.INSTANCE) { // x > v, v > x
+			if (rightIsExpr && (eval.isPositive() || eval.isZero()))
+				update = POS;
+			else if (!rightIsExpr && (eval.isNegative() || eval.isZero()))
+				update = NEG;
+		}
+		
+		if (update == null)
+			return environment;
+		else
+			return environment.putState(id, update);
 	}
 
 	@Override
